@@ -1,0 +1,9 @@
+{
+	"name": "2048-battle",
+	"description": "2048 Battle",
+	"version": "0.0.1",
+	"private": false,
+	"dependencies": {
+		"express.io": "1.x"
+	}
+}
