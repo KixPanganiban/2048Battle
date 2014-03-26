@@ -1,94 +1,75 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>2048</title>
+	<head>
+		<link href="bootstrap/css/bootstrap.css" rel="stylesheet"/>
+		<link href="css/flat-ui.css" rel="stylesheet"/>
 
-  <link href="style/main.css" rel="stylesheet" type="text/css">
-  <link rel="shortcut icon" href="favicon.ico">
-  <link rel="apple-touch-icon" href="meta/apple-touch-icon.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+		<title>2048Battle!</title>
+	</head>
+	<body>
+		<div class="container">
 
-  <meta name="HandheldFriendly" content="True">
-  <meta name="MobileOptimized" content="320">
-  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0, maximum-scale=1, user-scalable=no, minimal-ui">
-</head>
-<body>
-  <div class="container">
-    <div class="heading">
-      <h1 class="title">2048</h1>
-      <div class="scores-container">
-        <div class="score-container">0</div>
-        <div class="best-container">0</div>
-      </div>
-    </div>
+			<section id="header">
+				<h1>2048 Battle!</h1>
+				<p>Based on <b>2048</b> by <a href="//github.com/gabrielecirulli/2048">gabrielecirulli</a>. Multiplayer remake by kixpanganiban and jedcortez.</p>
+			</section>
 
-    <div class="above-game">
-      <p class="game-intro">Join the numbers and get to the <strong>2048 tile!</strong></p>
-      <a class="restart-button">New Game</a>
-    </div>
+			<hr/>
 
-    <div class="game-container">
-      <div class="game-message">
-        <p></p>
-        <div class="lower">
-	        <a class="keep-playing-button">Keep going</a>
-          <a class="retry-button">Try again</a>
-        </div>
-      </div>
+			<section id="body">
 
-      <div class="grid-container">
-        <div class="grid-row">
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-        </div>
-        <div class="grid-row">
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-        </div>
-        <div class="grid-row">
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-        </div>
-        <div class="grid-row">
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-          <div class="grid-cell"></div>
-        </div>
-      </div>
+				<div class="alert alert-info" id="divUsername"></div>
+				<script type="text/ractive" id="tmpUsername">
+					You are using the username <b>{{username}}</b>. <a href="#" class="btn btn-default btn-sm pull-right" on-click="changeUsername">Change Username</a>
+				</script>
 
-      <div class="tile-container">
+				<div class="row">
+					<div class="col-md-6">
+						<h3>Players in Lobby</h3>
+						<div id="divPlayersLobby"></div>
+						<script type="text/ractive" id="tmpPlayersLobby">
+						{{#players}}
+						<li>{{name}} 
+						<span class="pull-right"><a on-click="challenge:{{name}}" class="btn btn-primary btn-xs">Challenge!</a> <a on-click="message:{{name}}" class="btn btn-info btn-xs">Send Message</a></span></li>
+						{{/players}}
+						</script>
+					</div>
+					<div class="col-md-6">
+						<h3>Players in Game</h3>
+						<div id="divPlayersInGame"></div>
+						<script type="text/ractive" id="tmpPlayersInGame">
+						{{#games}}
+						<ul>
+							<li>{{playera.name}} <em>vs</em> {{playerb.name}}</li>
+						</ul>
+						{{/games}}
+						</script>
+					</div>
+				</div>
+			
+			</section>
 
-      </div>
-    </div>
+			<hr/>
 
-    <p class="game-explanation">
-      <strong class="important">How to play:</strong> Use your <strong>arrow keys</strong> to move the tiles. When two tiles with the same number touch, they <strong>merge into one!</strong>
-    </p>
-    <hr>
-    <p>
-    <strong class="important">Note:</strong> This site is the official version of 2048. You can play it on your phone via <a href="http://git.io/2048">http://git.io/2048.</a> All other apps or sites are derivatives or fakes, and should be used with caution.
-    </p>
-    <hr>
-    <p>
-    Created by <a href="http://gabrielecirulli.com" target="_blank">Gabriele Cirulli.</a> Based on <a href="https://itunes.apple.com/us/app/1024!/id823499224" target="_blank">1024 by Veewo Studio</a> and conceptually similar to <a href="http://asherv.com/threes/" target="_blank">Threes by Asher Vollmer.</a>
-    </p>
-  </div>
+			<section>
+				<p class="small well">Fork me on GitHub. A project for the class CS 145: Computer Networking at the University of the Philippines - Diliman.</p>
+			</section>
 
-  <script src="js/animframe_polyfill.js"></script>
-  <script src="js/keyboard_input_manager.js"></script>
-  <script src="js/html_actuator.js"></script>
-  <script src="js/grid.js"></script>
-  <script src="js/tile.js"></script>
-  <script src="js/local_storage_manager.js"></script>
-  <script src="js/game_manager.js"></script>
-  <script src="js/application.js"></script>
-</body>
+		</div>
+
+
+			<script src="js/jquery-1.8.3.min.js"></script>
+		    <script src="js/jquery-ui-1.10.3.custom.min.js"></script>
+		    <script src="js/jquery.ui.touch-punch.min.js"></script>
+		    <script src="js/bootstrap.min.js"></script>
+		    <script src="js/bootstrap-select.js"></script>
+		    <script src="js/bootstrap-switch.js"></script>
+		    <script src="js/flatui-checkbox.js"></script>
+		    <script src="js/flatui-radio.js"></script>
+		    <script src="js/jquery.tagsinput.js"></script>
+		    <script src="js/jquery.placeholder.js"></script>		
+		    <script src="/socket.io/socket.io.js"></script>
+		    <script src="js/ractive.js"></script>
+		    <script src="js/battle-lobby.js"></script>		
+	</body>
 </html>
