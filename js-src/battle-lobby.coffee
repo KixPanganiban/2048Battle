@@ -1,5 +1,6 @@
 # Local Data Containers
 players = []
+games = []
 
 $(document).ready () ->
 
@@ -8,7 +9,8 @@ $(document).ready () ->
 		username = prompt 'Your name?', 'Player 0'
 		document.cookie = username
 	else
-		username = document.cookie
+		cookies = document.cookie.split("$")
+		username = cookies[0]
 
 	# Sockets
 	# Initial Connection
@@ -24,8 +26,24 @@ $(document).ready () ->
 	socket.on 'playerUpdate', (data) ->
 		players = data.players
 		racPlayersLobby.set 'players', players
+	socket.on 'gameUpdate', (data) ->
+		games = data.games
+		racPlayersInGame.set 'games', games
 	socket.on 'message', (data) ->
 		alert "#{data.from}: #{data.message}"
+
+	# Game Socket Event Handlers
+	socket.on 'invite', (data) ->
+		from = data.from
+		inviteKey = data.inviteKey
+		answer = prompt("Invite received from #{from}! y/Y to accept, else deny.")
+		if answer is 'Y' or 'y'
+			socket.emit 'game:accept', inviteKey
+
+	socket.on 'startGame', (gameKey) ->
+		alert "Your game is starting! Match id: #{gameKey}"
+		document.cookie = "#{username}$#{gameKey}"
+		window.location = '/game'
 
 	# Username Ractive
 	racUsername = new Ractive {
@@ -39,8 +57,8 @@ $(document).ready () ->
 	racUsername.on 'changeUsername', () ->
 		username = prompt('New username?')
 		socket.emit 'usernameChange', username
-		@set 'username', username
 		document.cookie = username
+		@set 'username', username
 
 	# Players Lobby Ractive
 	racPlayersLobby = new Ractive {
@@ -52,19 +70,19 @@ $(document).ready () ->
 	}
 
 	racPlayersLobby.on {
-			challenge: (event, username) ->
-				alert "You have challenged #{username}!"
+			challenge: (event, destUsername) ->
+				if destUsername is username
+					alert "You can't invite yourself!"
+					return
+				socket.emit 'game:invite', destUsername
+				alert "You have invited #{destUsername} to a game! Please wait for confirmation."
 			message: (event, destUsername) ->
+				if destUsername is username
+					alert "You can't message yourself!"
+					return
 				message = prompt('Enter message: ')
 				socket.emit 'message', { to: destUsername, message: message }
 		}
-
-	# Players In Game Dummy Data
-	# TODO: Remove Later
-
-	games = [
-		{ playera: {name: 'Kropeck'}, playerb: {name: 'Crackers'} }
-	]
 
 	# Players In Game Ractive
 	racPlayersInGame = new Ractive {

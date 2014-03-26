@@ -13,7 +13,7 @@
 
 	...dary! Edgardo "alyas Balbas" P. Felizmenio jr
  */
-var app, express, pendingInvites, playerSockets, players, rooms;
+var app, express, games, pendingInvites, playerSockets, players;
 
 express = require('express.io');
 
@@ -37,7 +37,7 @@ players = [];
 
 playerSockets = [];
 
-rooms = [];
+games = [];
 
 pendingInvites = [];
 
@@ -56,6 +56,39 @@ app.io.route('handshake', function(req) {
   console.log("Player " + req.data.name + " connected from " + req.socket.id);
   return app.io.broadcast('playerUpdate', {
     players: players
+  });
+});
+
+app.io.route('handshakeBattle', function(req) {
+  req.io.respond({
+    status: 'OK'
+  });
+  playerSockets.push({
+    name: req.data.name,
+    socket: req.socket,
+    io: req.io
+  });
+  return console.log("Player " + req.data.name + " reconnected from " + req.socket.id + " (BATTLE MODE)");
+});
+
+app.io.route('verifyMatch', function(req) {
+  var game, gameKey, matchValid, thisGame, username, _i, _len;
+  matchValid = false;
+  username = req.data.username;
+  gameKey = req.data.gameKey;
+  thisGame = null;
+  for (_i = 0, _len = games.length; _i < _len; _i++) {
+    game = games[_i];
+    if (game.gameKey === gameKey) {
+      if (game.playera === username || game.playerb === username) {
+        matchValid = true;
+        thisGame = game;
+      }
+    }
+  }
+  return req.io.respond({
+    matchValid: matchValid,
+    gameInfo: thisGame
   });
 });
 
@@ -125,8 +158,94 @@ app.io.route('disconnect', function(req) {
 });
 
 app.io.route('game', {
-  invite: function(req) {},
-  accept: function(req) {}
+  invite: function(req) {
+    var from, inviteKey, playerSocket, to, _i, _j, _len, _len1;
+    inviteKey = Math.random().toString(36).substr(2, 10);
+    from = "";
+    to = req.data;
+    for (_i = 0, _len = playerSockets.length; _i < _len; _i++) {
+      playerSocket = playerSockets[_i];
+      if (playerSocket.socket.id === req.socket.id) {
+        from = playerSocket.name;
+      }
+    }
+    pendingInvites.push({
+      from: from,
+      to: to,
+      inviteKey: inviteKey
+    });
+    for (_j = 0, _len1 = playerSockets.length; _j < _len1; _j++) {
+      playerSocket = playerSockets[_j];
+      if (playerSocket.name === to) {
+        playerSocket.socket.emit('invite', {
+          from: from,
+          inviteKey: inviteKey
+        });
+      }
+    }
+    return console.log("Invite " + from + " -> " + to);
+  },
+  accept: function(req) {
+    var i, iStack, ii, inviteKey, j, jStack, jj, pendingInvite, player, playerSocket, thisInvite, x, y, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _m, _n, _o;
+    inviteKey = req.data;
+    thisInvite = null;
+    for (i = _i = 0, _len = pendingInvites.length; _i < _len; i = ++_i) {
+      pendingInvite = pendingInvites[i];
+      if (pendingInvite.inviteKey === inviteKey) {
+        thisInvite = pendingInvite;
+        pendingInvites.splice(i, 1);
+      }
+    }
+    iStack = [];
+    for (i = _j = 0, _len1 = players.length; _j < _len1; i = ++_j) {
+      player = players[i];
+      if (player.name === thisInvite.to || player.name === thisInvite.from) {
+        iStack.push(i);
+      }
+    }
+    for (_k = 0, _len2 = iStack.length; _k < _len2; _k++) {
+      i = iStack[_k];
+      players.splice(i, 1);
+      for (x = _l = 0, _len3 = iStack.length; _l < _len3; x = ++_l) {
+        ii = iStack[x];
+        if (i < ii) {
+          iStack[x] -= 1;
+        }
+      }
+    }
+    jStack = [];
+    for (j = _m = 0, _len4 = playerSockets.length; _m < _len4; j = ++_m) {
+      playerSocket = playerSockets[j];
+      if (playerSocket.name && playerSocket.name === thisInvite.to || playerSocket.name === thisInvite.from) {
+        jStack.push(j);
+        playerSocket.socket.emit('startGame', inviteKey);
+      }
+    }
+    for (_n = 0, _len5 = jStack.length; _n < _len5; _n++) {
+      j = jStack[_n];
+      playerSockets.splice(j, 1);
+      for (y = _o = 0, _len6 = jStack.length; _o < _len6; y = ++_o) {
+        jj = jStack[y];
+        if (j < jj) {
+          jStack[y] -= 1;
+        }
+      }
+    }
+    console.log(iStack);
+    console.log(players);
+    app.io.broadcast('playerUpdate', {
+      players: players
+    });
+    games.push({
+      playera: thisInvite.from,
+      playerb: thisInvite.to,
+      gameKey: inviteKey
+    });
+    app.io.broadcast('gameUpdate', {
+      games: games
+    });
+    return console.log("" + thisInvite.to + " has accepted an invitation from " + thisInvite.from + "!");
+  }
 });
 
 app.listen(8080);

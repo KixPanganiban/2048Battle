@@ -25,7 +25,10 @@
 
     <div class="above-game">
       <p class="game-intro">Get the 2048 tile faster than your opponent!
-      <br>You are playing against: <b>Kix</b>!</p>
+      <br><span id="divGameOpponent"></span></p>
+      <script type="text/ractive" id="tmpGameOpponent">
+      You are playing against: <b>{{otherPlayer}}</b>!
+      </script>
       <a class="restart-button">New Game</a>
     </div>
 
@@ -78,6 +81,10 @@
   <script src="/js/tile.js"></script>
   <script src="/js/local_storage_manager.js"></script>
   <script src="/js/game_manager.js"></script>
-  <script src="/js/application.js"></script>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/jquery-1.8.3.min.js"></script>
+  <script src="/js/ractive.js"></script>
+  <script src="/js/battle-proper.js"></script>
 </body>
 </html>

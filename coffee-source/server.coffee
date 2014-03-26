@@ -35,10 +35,10 @@ app.get "/game", (req, res) ->
 # Global Data Containers
 players = [] # { name: 'name' }
 playerSockets = [] # { name: 'name', socket: socket, io: io }
-rooms = []
-pendingInvites = [] # { from: 'name', to: 'name' }
+games = [] # { p1: 'name', p2: 'name', gameKey: 'gameKey'}
+pendingInvites = [] # { from: 'name', to: 'name', inviteKey: 'inviteKey' }
 
-# Socket Routers
+# Socket Routers (Lobby)
 # Initial Handshake
 app.io.route 'handshake', (req) ->
 	req.io.respond {
@@ -48,6 +48,29 @@ app.io.route 'handshake', (req) ->
 	playerSockets.push { name: req.data.name, socket: req.socket, io: req.io }
 	console.log "Player #{req.data.name} connected from #{req.socket.id}"
 	app.io.broadcast 'playerUpdate', { players: players }
+
+# Battle Proper Handshake
+app.io.route 'handshakeBattle', (req) ->
+	req.io.respond {
+		status: 'OK'
+	}
+	playerSockets.push { name: req.data.name, socket: req.socket, io: req.io }
+	console.log "Player #{req.data.name} reconnected from #{req.socket.id} (BATTLE MODE)"
+
+# Battle state verification
+app.io.route 'verifyMatch', (req) ->
+	matchValid = false
+	username = req.data.username
+	gameKey = req.data.gameKey
+	thisGame = null
+
+	for game in games
+		if game.gameKey is gameKey
+			if game.playera is username or game.playerb is username
+				matchValid = true
+				thisGame = game
+
+	req.io.respond { matchValid, gameInfo: thisGame	}
 
 # Username change handler
 app.io.route 'usernameChange', (req) ->
@@ -92,9 +115,60 @@ app.io.route 'disconnect', (req) ->
 # Game routes
 app.io.route 'game', {
 	invite: (req) ->
-		return
+		inviteKey = Math.random().toString(36).substr(2, 10)
+
+		from = ""
+		to = req.data
+		for playerSocket in playerSockets
+			if playerSocket.socket.id is req.socket.id
+				from = playerSocket.name
+
+		pendingInvites.push { from, to, inviteKey }
+
+		for playerSocket in playerSockets
+			if playerSocket.name is to 
+				playerSocket.socket.emit 'invite', { from, inviteKey }
+		console.log "Invite #{from} -> #{to}"
+
 	accept: (req) ->
-		return
+		inviteKey = req.data
+		thisInvite = null
+
+		for pendingInvite, i in pendingInvites
+			if pendingInvite.inviteKey is inviteKey
+				thisInvite = pendingInvite
+				pendingInvites.splice(i, 1)
+
+		iStack = []
+		for player, i in players
+			if player.name is thisInvite.to or player.name is thisInvite.from
+				iStack.push i
+
+		for i in iStack
+			players.splice i, 1
+			for ii, x in iStack
+				if i < ii
+					iStack[x] -= 1
+
+		jStack = []
+		for playerSocket, j in playerSockets
+			if playerSocket.name and playerSocket.name is thisInvite.to or playerSocket.name is thisInvite.from
+				jStack.push j
+				playerSocket.socket.emit 'startGame', inviteKey
+		
+		for j in jStack
+			playerSockets.splice j, 1
+			for jj, y in jStack
+				if j < jj
+					jStack[y] -= 1
+
+		console.log iStack
+		console.log players
+		app.io.broadcast 'playerUpdate', { players }
+		games.push { playera: thisInvite.from, playerb: thisInvite.to, gameKey: inviteKey }
+		app.io.broadcast 'gameUpdate', { games }
+
+		console.log "#{thisInvite.to} has accepted an invitation from #{thisInvite.from}!"
 }
 
 # Run the server on port 8080

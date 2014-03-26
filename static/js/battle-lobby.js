@@ -1,14 +1,17 @@
-var players;
+var games, players;
 
 players = [];
 
+games = [];
+
 $(document).ready(function() {
-  var games, racPlayersInGame, racPlayersLobby, racUsername, socket, username;
+  var cookies, racPlayersInGame, racPlayersLobby, racUsername, socket, username;
   if (!document.cookie) {
     username = prompt('Your name?', 'Player 0');
     document.cookie = username;
   } else {
-    username = document.cookie;
+    cookies = document.cookie.split("$");
+    username = cookies[0];
   }
   socket = io.connect();
   socket.emit('handshake', {
@@ -24,8 +27,26 @@ $(document).ready(function() {
     players = data.players;
     return racPlayersLobby.set('players', players);
   });
+  socket.on('gameUpdate', function(data) {
+    games = data.games;
+    return racPlayersInGame.set('games', games);
+  });
   socket.on('message', function(data) {
     return alert("" + data.from + ": " + data.message);
+  });
+  socket.on('invite', function(data) {
+    var answer, from, inviteKey;
+    from = data.from;
+    inviteKey = data.inviteKey;
+    answer = prompt("Invite received from " + from + "! y/Y to accept, else deny.");
+    if (answer === 'Y' || 'y') {
+      return socket.emit('game:accept', inviteKey);
+    }
+  });
+  socket.on('startGame', function(gameKey) {
+    alert("Your game is starting! Match id: " + gameKey);
+    document.cookie = "" + username + "$" + gameKey;
+    return window.location = '/game';
   });
   racUsername = new Ractive({
     el: 'divUsername',
@@ -37,8 +58,8 @@ $(document).ready(function() {
   racUsername.on('changeUsername', function() {
     username = prompt('New username?');
     socket.emit('usernameChange', username);
-    this.set('username', username);
-    return document.cookie = username;
+    document.cookie = username;
+    return this.set('username', username);
   });
   racPlayersLobby = new Ractive({
     el: 'divPlayersLobby',
@@ -48,11 +69,20 @@ $(document).ready(function() {
     }
   });
   racPlayersLobby.on({
-    challenge: function(event, username) {
-      return alert("You have challenged " + username + "!");
+    challenge: function(event, destUsername) {
+      if (destUsername === username) {
+        alert("You can't invite yourself!");
+        return;
+      }
+      socket.emit('game:invite', destUsername);
+      return alert("You have invited " + destUsername + " to a game! Please wait for confirmation.");
     },
     message: function(event, destUsername) {
       var message;
+      if (destUsername === username) {
+        alert("You can't message yourself!");
+        return;
+      }
       message = prompt('Enter message: ');
       return socket.emit('message', {
         to: destUsername,
@@ -60,16 +90,6 @@ $(document).ready(function() {
       });
     }
   });
-  games = [
-    {
-      playera: {
-        name: 'Kropeck'
-      },
-      playerb: {
-        name: 'Crackers'
-      }
-    }
-  ];
   return racPlayersInGame = new Ractive({
     el: 'divPlayersInGame',
     template: '#tmpPlayersInGame',
