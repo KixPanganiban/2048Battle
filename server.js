@@ -138,16 +138,38 @@ app.io.route('message', function(req) {
 });
 
 app.io.route('disconnect', function(req) {
-  var i, j, player, playerSocket, _i, _j, _len, _len1;
+  var i, iStack, ii, j, jStack, jj, player, playerSocket, x, y, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _m, _n;
+  iStack = [];
+  jStack = [];
   for (i = _i = 0, _len = playerSockets.length; _i < _len; i = ++_i) {
     playerSocket = playerSockets[i];
     if (playerSocket.socket.id === req.socket.id) {
-      playerSockets.splice(i, 1);
+      iStack.push(i);
       for (j = _j = 0, _len1 = players.length; _j < _len1; j = ++_j) {
         player = players[j];
         if (player.name === playerSocket.name) {
-          players.splice(j, 1);
+          jStack.push(j);
         }
+      }
+    }
+  }
+  for (_k = 0, _len2 = iStack.length; _k < _len2; _k++) {
+    i = iStack[_k];
+    playerSockets.splice(i, 1);
+    for (x = _l = 0, _len3 = iStack.length; _l < _len3; x = ++_l) {
+      ii = iStack[x];
+      if (i < ii) {
+        iStack[x] -= 1;
+      }
+    }
+  }
+  for (_m = 0, _len4 = jStack.length; _m < _len4; _m++) {
+    j = jStack[_m];
+    players.splice(j, 1);
+    for (y = _n = 0, _len5 = jStack.length; _n < _len5; y = ++_n) {
+      jj = jStack[y];
+      if (j < jj) {
+        jStack[y] -= 1;
       }
     }
   }
@@ -245,6 +267,18 @@ app.io.route('game', {
       games: games
     });
     return console.log("" + thisInvite.to + " has accepted an invitation from " + thisInvite.from + "!");
+  },
+  updateStatus: function(req) {
+    var gameKey, player, status;
+    gameKey = req.data.gameKey;
+    status = req.data.status;
+    player = req.data.player;
+    console.log("" + player + " just " + status + " game " + gameKey);
+    return app.io.broadcast("gameOver", {
+      gameKey: gameKey,
+      status: status,
+      player: player
+    });
   }
 });
 

@@ -103,12 +103,27 @@ app.io.route 'message', (req) ->
 
 # Disconnection Handler
 app.io.route 'disconnect', (req) ->
+	iStack = []
+	jStack = []
 	for playerSocket, i in playerSockets
 		if playerSocket.socket.id is req.socket.id
-			playerSockets.splice i, 1
+			iStack.push i
 			for player, j in players
 				if player.name is playerSocket.name
-					players.splice j, 1
+					jStack.push j
+
+	for i in iStack
+		playerSockets.splice i, 1
+		for ii, x in iStack
+			if i < ii
+				iStack[x] -= 1
+
+	for j in jStack
+		players.splice j, 1
+		for jj, y in jStack
+			if j < jj
+				jStack[y] -= 1
+
 	app.io.broadcast 'playerUpdate', { players: players }
 	console.log "#{req.socket.id} has disconnected."
 
@@ -169,7 +184,14 @@ app.io.route 'game', {
 		app.io.broadcast 'gameUpdate', { games }
 
 		console.log "#{thisInvite.to} has accepted an invitation from #{thisInvite.from}!"
-}
+	updateStatus: (req) ->
+		gameKey = req.data.gameKey
+		status = req.data.status
+		player = req.data.player
+
+		console.log "#{player} just #{status} game #{gameKey}"
+		app.io.broadcast "gameOver", { gameKey, status, player }
+}		
 
 # Run the server on port 8080
 app.listen 8080

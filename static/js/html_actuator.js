@@ -1,8 +1,10 @@
-function HTMLActuator() {
+function HTMLActuator(Socket) {
   this.tileContainer    = document.querySelector(".tile-container");
   this.scoreContainer   = document.querySelector(".score-container");
   this.bestContainer    = document.querySelector(".best-container");
   this.messageContainer = document.querySelector(".game-message");
+
+  this.socket = Socket
 
   this.score = 0;
 }
@@ -26,9 +28,16 @@ HTMLActuator.prototype.actuate = function (grid, metadata) {
 
     if (metadata.terminated) {
       if (metadata.over) {
+        self.socket.emit("game:updateStatus", { status: "lose", gameKey: document.cookie.split("$")[1], player: document.cookie.split("$")[0] } );
         self.message(false); // You lose
+        alert("You have lost the match! You will now be returned to the lobby.");
+        window.location = "/";
       } else if (metadata.won) {
-        self.message(true); // You win!
+        self.socket.emit("game:updateStatus", { status: "win", gameKey: document.cookie.split("$")[1], player: document.cookie.split("$")[0] } );
+        self.message(true); // You win!        
+        alert("You have won the match! You will now be returned to the lobby.");
+        window.location = "/";
+
       }
     }
 

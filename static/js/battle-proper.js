@@ -1,4 +1,4 @@
-var cookies, gameInfo, otherPlayer;
+var cookies, gameInfo, otherPlayer, thisActuator;
 
 cookies = [];
 
@@ -6,8 +6,10 @@ gameInfo = [];
 
 otherPlayer = null;
 
+thisActuator = null;
+
 $(document).ready(function() {
-  var racGameOpponent, socket;
+  var racGameOpponent, socket, thisGameManager;
   if (!document.cookie) {
     alert("Select an opponent in the lobby first!");
     window.location = "/";
@@ -19,6 +21,7 @@ $(document).ready(function() {
     }
   }
   socket = io.connect();
+  thisGameManager = new GameManager(4, KeyboardInputManager, HTMLActuator, LocalStorageManager, socket);
   racGameOpponent = new Ractive({
     el: 'divGameOpponent',
     template: '#tmpGameOpponent',
@@ -35,7 +38,7 @@ $(document).ready(function() {
       return console.log('Connection error. Please check your internet connection.');
     }
   });
-  return socket.emit('verifyMatch', {
+  socket.emit('verifyMatch', {
     username: cookies[0],
     gameKey: cookies[1]
   }, function(res) {
@@ -45,7 +48,28 @@ $(document).ready(function() {
     }
     gameInfo = res.gameInfo;
     otherPlayer = gameInfo.playerb === cookies[0] ? gameInfo.playera : gameInfo.playerb;
-    racGameOpponent.set('otherPlayer', otherPlayer);
-    return new GameManager(4, KeyboardInputManager, HTMLActuator, LocalStorageManager, socket);
+    return racGameOpponent.set('otherPlayer', otherPlayer);
+  });
+  return socket.on('gameOver', function(data) {
+    var currentGameKey, rcvdGameKey, status, thatPlayer;
+    currentGameKey = cookies[1];
+    rcvdGameKey = data.gameKey;
+    status = data.status;
+    thatPlayer = data.player;
+    if (cookies[1] !== rcvdGameKey) {
+      return;
+    }
+    if (cookies[0] !== thatPlayer) {
+      if (status === "win") {
+        thisGameManager.actuator.message(false);
+        alert("" + thatPlayer + " won the match! You will now be returned to the lobby.");
+        window.location = "/";
+      }
+      if (status === "lose") {
+        thisGameManager.actuator.message(true);
+        alert("" + thatPlayer + "'s game is over! You win! You will now be returned to the lobby.");
+        return window.location = "/";
+      }
+    }
   });
 });
